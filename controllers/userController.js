@@ -1,53 +1,39 @@
-const db = require("../db/database");
+const User = require('../models/user');
 
-const getUsers = (req, res) => {
-  db.all("SELECT * FROM users", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+const getUsers = async (req, res) => {
+  const users = await User.findAll();
+  res.json(users);
 };
 
-const getUserById = (req, res) => {
-  const id = req.params.id;
-
-  db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ message: "User not found" });
-    res.json(row);
-  });
+const getUserById = async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  res.json(user);
 };
 
-const addUser = (req, res) => {
+const addUser = async (req, res) => {
   const { name, email } = req.body;
-  if (!name || !email) {
-    return res.status(400).json({ message: "Name and email are required" });
+  try {
+    const user = await User.create({ name, email });
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
-
-  db.run("INSERT INTO users (name, email) VALUES (?, ?)", [name, email], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id: this.lastID, name, email });
-  });
 };
 
-const updateUser = (req, res) => {
-  const id = req.params.id;
+const updateUser = async (req, res) => {
   const { name, email } = req.body;
-
-  db.run("UPDATE users SET name = ?, email = ? WHERE id = ?", [name, email, id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ message: "User not found" });
-    res.json({ id, name, email });
-  });
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  await user.update({ name, email });
+  res.json(user);
 };
 
-const deleteUser = (req, res) => {
-  const id = req.params.id;
-
-  db.run("DELETE FROM users WHERE id = ?", [id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ message: "User not found" });
-    res.json({ message: "User deleted" });
-  });
+const deleteUser = async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  await user.destroy();
+  res.json({ message: 'User deleted' });
 };
 
 module.exports = {
